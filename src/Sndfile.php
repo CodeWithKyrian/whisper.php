@@ -12,6 +12,7 @@ use RuntimeException;
 
 class Sndfile
 {
+    private static ?LibraryLoader $loader = null;
     /**
      * Returns an instance of the FFI class after checking if it has already been instantiated.
      * If not, it creates a new instance by defining the header contents and library path.
@@ -22,7 +23,8 @@ class Sndfile
      */
     public static function ffi(): FFI
     {
-        return LibraryLoader::getInstance('sndfile');
+        self::$loader ??= new LibraryLoader;
+        return  self::$loader->get('sndfile');
     }
 
     /**

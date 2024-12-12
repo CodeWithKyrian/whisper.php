@@ -59,4 +59,9 @@ class PlatformDetector
     {
         return isset(self::SUPPORTED_PLATFORMS[$this->os][$this->arch]);
     }
+
+    public function isWindows(): bool
+    {
+        return $this->os === 'windows';
+    }
 }

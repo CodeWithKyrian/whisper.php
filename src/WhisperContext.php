@@ -16,14 +16,15 @@ class WhisperContext
     /**
      * Create a new WhisperContext from a file, with parameters.
      *
-     * @param  string  $modelPath  The path to the model file.
-     * @param  WhisperContextParameters|null  $params  A parameter struct containing the parameters to use.
+     * @param string $modelPath The path to the model file.
+     * @param WhisperContextParameters|null $params A parameter struct containing the parameters to use.
      *
      * @throws WhisperException
      */
     public function __construct(string $modelPath, ?WhisperContextParameters $params = null)
     {
-        $this->ffi = LibraryLoader::getInstance('whisper');
+        $libraryLoader = new LibraryLoader();
+        $this->ffi = $libraryLoader->get('whisper');
 
         $this->setupLoggerCallback();
 
@@ -51,8 +52,8 @@ class WhisperContext
     /**
      * Convert the provided text into tokens.
      *
-     * @param  string  $text  The text to convert.
-     * @param  int  $maxTokens  The maximum number of tokens to return.
+     * @param string $text The text to convert.
+     * @param int $maxTokens The maximum number of tokens to return.
      */
     public function tokenize(string $text, int $maxTokens): array
     {
@@ -109,7 +110,7 @@ class WhisperContext
      */
     public function isMultilingual(): bool
     {
-        return (bool) $this->ffi->whisper_is_multilingual($this->ctx);
+        return (bool)$this->ffi->whisper_is_multilingual($this->ctx);
     }
 
     /**
@@ -178,7 +179,7 @@ class WhisperContext
     /**
      * Convert a token ID to a string.
      *
-     * @param  int  $tokenId  The ID of the token to convert.
+     * @param int $tokenId The ID of the token to convert.
      */
     public function tokenToStr(int $tokenId): string
     {
@@ -262,7 +263,7 @@ class WhisperContext
     /**
      * Get the ID of a specified language token
      *
-     * @param  int  $langId  The ID of the language
+     * @param int $langId The ID of the language
      */
     public function tokenLang(int $langId): int
     {
@@ -272,7 +273,7 @@ class WhisperContext
     /**
      * Return the id of the specified language, returns -1 if not found
      *
-     * @param  string  $lang  The language to get the ID of
+     * @param string $lang The language to get the ID of
      */
     public function langId(string $lang): int
     {
@@ -292,7 +293,7 @@ class WhisperContext
     /**
      *  Return the short string of the specified language id (e.g. 2 -> "de"), returns nullptr if not found
      *
-     * @param  int  $langId  The ID of the language
+     * @param int $langId The ID of the language
      */
     public function langStr(int $langId): string
     {
@@ -302,7 +303,7 @@ class WhisperContext
     /**
      * Return the short string of the specified language name (e.g. 2 -> "german"), returns nullptr if not found
      *
-     * @param  int  $langId  The ID of the language
+     * @param int $langId The ID of the language
      */
     public function langStrFull(int $langId): string
     {
@@ -354,7 +355,7 @@ class WhisperContext
     /**
      * Get the text of the segment at the specified index.
      *
-     * @param  int  $index  Segment index.
+     * @param int $index Segment index.
      */
     public function getSegmentText(int $index): string
     {
@@ -364,7 +365,7 @@ class WhisperContext
     /**
      * Get the start time of the segment at the specified index.
      *
-     * @param  int  $index  Segment index.
+     * @param int $index Segment index.
      */
     public function getSegmentStartTime(int $index): int
     {
@@ -374,7 +375,7 @@ class WhisperContext
     /**
      * Get the end time of the segment at the specified index.
      *
-     * @param  int  $index  Segment index.
+     * @param int $index Segment index.
      */
     public function getSegmentEndTime(int $index): int
     {
@@ -384,7 +385,7 @@ class WhisperContext
     /**
      * Get number of tokens in the specified segment.
      *
-     * @param  int  $index  Segment index.
+     * @param int $index Segment index.
      */
     public function nTokens(int $index): int
     {
@@ -394,8 +395,8 @@ class WhisperContext
     /**
      * Get the token text of the specified token in the specified segment.
      *
-     * @param  int  $index  Segment index.
-     * @param  int  $token  Token index.
+     * @param int $index Segment index.
+     * @param int $token Token index.
      */
     public function tokenText(int $index, int $token): string
     {
@@ -416,8 +417,8 @@ class WhisperContext
     /**
      * Get the token ID of the specified token in the specified segment.
      *
-     * @param  int  $index  Segment index.
-     * @param  int  $token  Token index.
+     * @param int $index Segment index.
+     * @param int $token Token index.
      */
     public function tokenId(int $index, int $token): int
     {
@@ -427,8 +428,8 @@ class WhisperContext
     /**
      * Get the probability of the specified token in the specified segment.
      *
-     * @param  int  $index  Segment index.
-     * @param  int  $token  Token index.
+     * @param int $index Segment index.
+     * @param int $token Token index.
      */
     public function tokenProb(int $index, int $token): float
     {

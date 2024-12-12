@@ -8,7 +8,7 @@ use Codewithkyrian\Whisper\WhisperGrammarElement;
 use Codewithkyrian\Whisper\WhisperGrammarElementType;
 
 beforeEach(function () {
-    $this->ffi = LibraryLoader::getInstance('whisper');
+    $this->ffi = (new LibraryLoader())->get('whisper');
 });
 
 it('correctly converts default parameters to C structure', function () {
