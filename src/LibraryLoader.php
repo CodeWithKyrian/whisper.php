@@ -144,7 +144,7 @@ class LibraryLoader
     {
         if (!$this->platformDetector->isWindows()) return;
 
-        $libDir = realpath($this->getLibraryDirectory($this->platformDetector->getPlatformIdentifier()));
+        $libDir = ($this->getLibraryDirectory($this->platformDetector->getPlatformIdentifier()));
         $this->kernel32 ??= FFI::cdef("
             int SetDllDirectoryA(const char* lpPathName);
             int SetDefaultDllDirectories(unsigned long DirectoryFlags);
