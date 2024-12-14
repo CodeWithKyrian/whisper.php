@@ -1,12 +1,13 @@
 {
   "name": "codewithkyrian/whisper.php",
   "description": "PHP bindings for OpenAI Whisper made possible by whisper.cpp",
-  "type": "library",
+  "type": "platform-package",
   "version": "1.0.0",
   "require": {
     "php": "^8.1",
     "ext-ffi": "*",
-    "psr/log": "^3.0"
+    "psr/log": "^3.0",
+    "codewithkyrian/composer-platform-packages": "dev-main"
   },
   "require-dev": {
     "symfony/var-dumper": "^6.4.11|^7.1.5",
@@ -35,7 +36,24 @@
   ],
   "config": {
     "allow-plugins": {
-      "pestphp/pest-plugin": true
+      "pestphp/pest-plugin": true,
+      "codewithkyrian/composer-platform-packages": true
+    }
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/codewithkyrian/composer-platform-packages"
+    }
+  ],
+  "extra": {
+    "platform-urls": {
+      "linux-x86_64": "https://github.com/Codewithkyrian/whisper.php/releases/download/{version}/dist-linux-x86_64.tar.gz",
+      "linux-arm64": "https://github.com/Codewithkyrian/whisper.php/releases/download/{version}/dist-linux-arm64.tar.gz",
+      "darwin-x86_64": "https://github.com/Codewithkyrian/whisper.php/releases/download/{version}/dist-darwin-x86_64.tar.gz",
+      "darwin-arm64": "https://github.com/Codewithkyrian/whisper.php/releases/download/{version}/dist-darwin-arm64.tar.gz",
+      "windows-x86_64": "https://github.com/Codewithkyrian/whisper.php/releases/download/{version}/dist-windows-x86_64.zip",
+      "windows-arm64": "https://github.com/Codewithkyrian/whisper.php/releases/download/{version}/dist-windows-arm64.zip"
     }
   }
 }

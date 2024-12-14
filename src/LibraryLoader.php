@@ -4,36 +4,31 @@ declare(strict_types=1);
 
 namespace Codewithkyrian\Whisper;
 
+use Codewithkyrian\ComposerPlatformPackages\Platform;
 use FFI;
 use RuntimeException;
-use ZipArchive;
 
 class LibraryLoader
 {
     private const LIBRARY_CONFIGS = [
-        'whisper' => [
-            'header' => 'whisper.h',
-            'lib_prefix' => 'libwhisper',
-        ],
-        'sndfile' => [
-            'header' => 'sndfile.h',
-            'lib_prefix' => 'libsndfile',
-        ],
-        'samplerate' => [
-            'header' => 'samplerate.h',
-            'lib_prefix' => 'libsamplerate',
-        ],
+        'whisper' => ['header' => 'whisper.h', 'library' => 'libwhisper'],
+        'sndfile' => ['header' => 'sndfile.h', 'library' => 'libsndfile',],
+        'samplerate' => ['header' => 'samplerate.h', 'library' => 'libsamplerate'],
     ];
-    private const WHISPER_CPP_VERSION = '1.7.2';
-    private const DOWNLOAD_URL = 'https://huggingface.co/codewithkyrian/whisper.php/resolve/%s/libs/%s.zip';
+
+    private const PLATFORM_CONFIGS = [
+        'linux-x86_64' => ['directory' => 'linux-x86_64', 'extension' => 'so',],
+        'linux-arm64' => ['directory' => 'linux-arm64', 'extension' => 'so',],
+        'darwin-x86_64' => ['directory' => 'darwin-x86_64', 'extension' => 'dylib',],
+        'darwin-arm64' => ['directory' => 'darwin-arm64', 'extension' => 'dylib',],
+        'windows-x86_64' => ['directory' => 'windows-x86_64', 'extension' => 'dll',],
+    ];
 
     private static array $instances = [];
-    private ?PlatformDetector $platformDetector;
     private ?FFI $kernel32 = null;
 
-    public function __construct(?PlatformDetector $platformDetector = null)
+    public function __construct()
     {
-        $this->platformDetector = $platformDetector ?? new PlatformDetector();
         $this->addDllDirectory();
     }
 
@@ -63,20 +58,16 @@ class LibraryLoader
             throw new RuntimeException("Unsupported library: {$library}");
         }
 
-        $config = self::LIBRARY_CONFIGS[$library];
-
-        $headerPath = self::getHeaderPath($config['header']);
-        $libPath = self::getLibraryPath(
-            $config['lib_prefix'],
-            $this->platformDetector->getLibraryExtension(),
-            $this->platformDetector->getPlatformIdentifier()
-        );
-
-        if (!file_exists($libPath)) {
-            $this->downloadLibraries();
+        $platformConfig = Platform::findBestMatch(self::PLATFORM_CONFIGS);
+        if (!$platformConfig) {
+            throw new RuntimeException("No matching platform configuration found");
         }
 
-        return FFI::cdef(file_get_contents($headerPath), $libPath);
+        $config = self::LIBRARY_CONFIGS[$library];
+        $headerPath = $this->getHeaderPath($config['header']);
+        $libraryPath = $this->getLibraryPath($config['library'], $platformConfig['extension'], $platformConfig['directory']);
+
+        return FFI::cdef(file_get_contents($headerPath), $libraryPath);
     }
 
     private static function getHeaderPath(string $headerFile): string
@@ -84,57 +75,17 @@ class LibraryLoader
         return self::joinPaths(dirname(__DIR__), 'include', $headerFile);
     }
 
-    private static function getLibraryPath(string $prefix, string $extension, string $platform): string
-    {
-        return self::joinPaths(self::getLibraryDirectory($platform), "$prefix.$extension");
-    }
-
-    private static function getLibraryDirectory(string $platform): string
-    {
-        return self::joinPaths(dirname(__DIR__), 'lib', $platform);
-    }
-
     /**
-     * Download libraries from Hugging Face
+     * Get path to library file
      */
-    private function downloadLibraries(): void
+    private function getLibraryPath(string $libName, string $extension, string $platformDir): string
     {
-        $platform = $this->platformDetector->getPlatformIdentifier();
+        return self::joinPaths(dirname(__DIR__), 'lib', $platformDir, "$libName.$extension");
+    }
 
-        $url = sprintf(self::DOWNLOAD_URL, self::WHISPER_CPP_VERSION, $platform);
-
-        $tempFile = tempnam(sys_get_temp_dir(), 'whisper-cpp-libs');
-
-        $ch = curl_init();
-        $fp = fopen($tempFile, 'w');
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_FILE, $fp);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_FAILONERROR, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Accept: application/octet-stream',
-        ]);
-
-        if (!curl_exec($ch)) {
-            fclose($fp);
-            unlink($tempFile);
-            throw new \RuntimeException(sprintf('Failed to download libraries from %s: %s', $url, curl_error($ch)));
-        }
-
-        // Extract ZIP file
-        $zip = new ZipArchive;
-        if ($zip->open($tempFile) === true) {
-            $platformLibDir = self::joinPaths(dirname(__DIR__), 'lib', $platform);
-            if (!is_dir($platformLibDir)) {
-                mkdir($platformLibDir, 0755, true);
-            }
-            $zip->extractTo($platformLibDir);
-            $zip->close();
-
-            unlink($tempFile);
-        } else {
-            throw new RuntimeException('Failed to downloaded ZIP');
-        }
+    private static function getLibraryDirectory(string $platformDir): string
+    {
+        return self::joinPaths(dirname(__DIR__), 'lib', $platformDir);
     }
 
     /**
@@ -142,15 +93,15 @@ class LibraryLoader
      */
     private function addDllDirectory(): void
     {
-        if (!$this->platformDetector->isWindows()) return;
+        if (!Platform::isWindows()) return;
 
-        $libDir = ($this->getLibraryDirectory($this->platformDetector->getPlatformIdentifier()));
+        $libraryDir = self::getLibraryDirectory(Platform::findBestMatch(self::PLATFORM_CONFIGS)['directory']);
         $this->kernel32 ??= FFI::cdef("
             int SetDllDirectoryA(const char* lpPathName);
             int SetDefaultDllDirectories(unsigned long DirectoryFlags);
         ", 'kernel32.dll');
 
-        $this->kernel32->SetDllDirectoryA($libDir);
+        $this->kernel32->SetDllDirectoryA($libraryDir);
     }
 
     /**
