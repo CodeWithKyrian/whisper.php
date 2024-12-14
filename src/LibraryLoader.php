@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Codewithkyrian\Whisper;
 
-use Codewithkyrian\ComposerPlatformPackages\Platform;
+use Codewithkyrian\PlatformPackageInstaller\Platform;
 use FFI;
 use RuntimeException;
 
