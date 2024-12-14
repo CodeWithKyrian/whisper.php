@@ -96,8 +96,8 @@ class LibraryLoader
         if (!Platform::isWindows()) return;
 
         $platformConfig = Platform::findBestMatch(self::PLATFORM_CONFIGS);
-        dump($platformConfig, Platform::current());
         $libraryDir = self::getLibraryDirectory($platformConfig['directory']);
+
         $this->kernel32 ??= FFI::cdef("
             int SetDllDirectoryA(const char* lpPathName);
             int SetDefaultDllDirectories(unsigned long DirectoryFlags);
