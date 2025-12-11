@@ -1,5 +1,9 @@
 #ifndef WHISPER_H
 #define WHISPER_H
+#endif
+
+#include <stdint.h>
+#include <stddef.h>
 
 #define WHISPER_SAMPLE_RATE 16000
 #define WHISPER_N_FFT       400
@@ -52,7 +56,7 @@ typedef int32_t whisper_pos;
 typedef int32_t whisper_token;
 typedef int32_t whisper_seq_id;
 
- enum whisper_alignment_heads_preset {
+enum whisper_alignment_heads_preset {
     WHISPER_AHEADS_NONE,
     WHISPER_AHEADS_N_TOP_MOST,  // All heads from the N-top-most text-layers
     WHISPER_AHEADS_CUSTOM,

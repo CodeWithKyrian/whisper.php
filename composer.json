@@ -9,10 +9,9 @@
     "codewithkyrian/platform-package-installer": "^1.0"
   },
   "require-dev": {
-    "symfony/var-dumper": "^6.4.11|^7.1.5",
+    "symfony/var-dumper": "^6.4.11|^7.1.5|^8.0",
     "pestphp/pest": "^2.36.0|^3.5.0",
-    "mockery/mockery": "^1.6",
-    "laravel/pint": "^1.18"
+    "mockery/mockery": "^1.6"
   },
   "license": "MIT",
   "autoload": {

@@ -10,21 +10,49 @@ use RuntimeException;
 
 class LibraryLoader
 {
-    private const LIBRARY_CONFIGS = [
-        'whisper' => ['header' => 'whisper.h', 'library' => 'libwhisper'],
-        'sndfile' => ['header' => 'sndfile.h', 'library' => 'libsndfile',],
-        'samplerate' => ['header' => 'samplerate.h', 'library' => 'libsamplerate'],
+    private const LIBRARIES = [
+        'whisper' => [
+            'name' => 'whisper',
+            'header' => 'whisper.h',
+            'version' => '1.7.2',
+        ],
+        'sndfile' => [
+            'name' => 'sndfile',
+            'header' => 'sndfile.h',
+            'version' => '1.2.2',
+        ],
+        'samplerate' => [
+            'name' => 'samplerate',
+            'header' => 'samplerate.h',
+            'version' => '0.2.2',
+        ],
     ];
 
-    private const PLATFORM_CONFIGS = [
-        'linux-x86_64' => ['directory' => 'linux-x86_64', 'extension' => 'so',],
-        'linux-arm64' => ['directory' => 'linux-arm64', 'extension' => 'so',],
-        'darwin-x86_64' => ['directory' => 'darwin-x86_64', 'extension' => 'dylib',],
-        'darwin-arm64' => ['directory' => 'darwin-arm64', 'extension' => 'dylib',],
-        'windows-x86_64' => ['directory' => 'windows-x86_64', 'extension' => 'dll',],
+    private const PLATFORMS = [
+        'linux-x86_64' => [
+            'directory' => 'linux-x86_64',
+            'path' => 'lib{name}.so.{version}',
+        ],
+        'linux-arm64' => [
+            'directory' => 'linux-arm64',
+            'path' => 'lib{name}.so.{version}',
+        ],
+        'darwin-x86_64' => [
+            'directory' => 'darwin-x86_64',
+            'path' => 'lib{name}.{version}.dylib',
+        ],
+        'darwin-arm64' => [
+            'directory' => 'darwin-arm64',
+            'path' => 'lib{name}.{version}.dylib',
+        ],
+        'windows-x86_64' => [
+            'directory' => 'windows-x86_64',
+            'path' => '{name}-{version}.dll',
+        ],
     ];
 
     private static array $instances = [];
+ 
     private ?FFI $kernel32 = null;
 
     public function __construct()
@@ -54,18 +82,18 @@ class LibraryLoader
      */
     private function load(string $library): FFI
     {
-        if (!isset(self::LIBRARY_CONFIGS[$library])) {
+        $config = self::LIBRARIES[$library] ?? null;
+        if ($config === null) {
             throw new RuntimeException("Unsupported library: {$library}");
         }
 
-        $platformConfig = Platform::findBestMatch(self::PLATFORM_CONFIGS);
-        if (!$platformConfig) {
-            throw new RuntimeException("No matching platform configuration found");
+        $platform = Platform::findBestMatch(self::PLATFORMS);
+        if (!$platform) {
+            throw new RuntimeException("Unsupported platform: ".json_encode(Platform::current()));
         }
 
-        $config = self::LIBRARY_CONFIGS[$library];
         $headerPath = $this->getHeaderPath($config['header']);
-        $libraryPath = $this->getLibraryPath($config['library'], $platformConfig['extension'], $platformConfig['directory']);
+        $libraryPath = $this->getLibraryPath($config['name'],$config['version'],$platform);
 
         return FFI::cdef(file_get_contents($headerPath), $libraryPath);
     }
@@ -78,9 +106,19 @@ class LibraryLoader
     /**
      * Get path to library file
      */
-    private function getLibraryPath(string $libName, string $extension, string $platformDir): string
+    private function getLibraryPath(string $libName, string $version, array $platform): string
     {
-        return self::joinPaths(dirname(__DIR__), 'lib', $platformDir, "$libName.$extension");
+        $libraryDir = self::getLibraryDirectory($platform['directory']);
+        $template = $platform['path'];
+
+        $filename = str_replace(['{name}', '{version}'], [$libName, $version], $template);
+        $candidate = self::joinPaths($libraryDir, $filename);
+
+        if (file_exists($candidate)) {
+            return $candidate;
+        }
+
+        throw new RuntimeException("Unable to locate library file for {$libName} in {$libraryDir}");
     }
 
     private static function getLibraryDirectory(string $platformDir): string
@@ -95,15 +133,15 @@ class LibraryLoader
     {
         if (!Platform::isWindows()) return;
 
-        $platformConfig = Platform::findBestMatch(self::PLATFORM_CONFIGS);
-        $libraryDir = self::getLibraryDirectory($platformConfig['directory']);
+        $platform = Platform::findBestMatch(self::PLATFORMS);
+        $libraryDir = self::getLibraryDirectory($platform['directory']);
 
         $this->kernel32 ??= FFI::cdef("
             int SetDllDirectoryA(const char* lpPathName);
             int SetDefaultDllDirectories(unsigned long DirectoryFlags);
         ", 'kernel32.dll');
 
-        $this->kernel32->SetDllDirectoryA($libraryDir);
+        $this->kernel32?->{'SetDllDirectoryA'}($libraryDir);
     }
 
     /**
@@ -112,7 +150,7 @@ class LibraryLoader
     private function resetDllDirectory(): void
     {
         if ($this->kernel32 !== null) {
-            $this->kernel32->SetDllDirectoryA(null);
+            $this->kernel32?->{'SetDllDirectoryA'}(null);
         }
     }
 
